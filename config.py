@@ -20,7 +20,7 @@ class F5Config:
     learning_rate: float = 7.5e-5
     warmup_steps: int = 20000
     total_steps: int = 1000
-    grad_accum: int = 4          # เพิ่ม accum
+    grad_accum: int = 4
     max_grad_norm: float = 1.0
     batch_size_per_gpu: int = 12
 
@@ -28,7 +28,10 @@ class F5Config:
 
     save_checkpoint: int = 500
 
-
+    # Eval
+    eval_every: int = 500        # eval ทุกกี่ step (ตั้งเท่า save_checkpoint ก็ได้)
+    val_split: float = 0.05      # แบ่ง 5% เป็น val set
+    eval_max_batches: int = 50   # จำกัด batch ตอน eval ไม่ให้รอนาน (-1 = วิ่งทั้งหมด)
 
     # Paths
     vocab_path: str = "/content/F5-TTS-E3/dataset/vocab.txt"
@@ -36,3 +39,6 @@ class F5Config:
     output_dir: str = "/content/F5-TTS-E3/ckpts"
     resume_ckpt: str = ""
     num_workers: int = 2
+
+    train_data_path: str = "/content/F5-TTS-E3/dataset/metadata_train.csv"
+    eval_data_path: str = "/content/F5-TTS-E3/dataset/metadata_eval.csv"

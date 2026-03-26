@@ -23,7 +23,7 @@ class VoiceDataset(Dataset):
 
         # โหลด metadata
         df = pd.read_csv(f'{self.data_path}/metadata.csv', sep="|",
-                         names=["path", "text"])
+                         names=["path", "text"], skiprows=1)
         self.items = df.values.tolist()
 
         # Mel filterbank
@@ -59,7 +59,6 @@ class VoiceDataset(Dataset):
         tokens = torch.tensor(self.tokenize(text), dtype=torch.long)
         return mel, tokens
 
-max_frames = F5Config().max_mel_len
 def collate_fn(batch,max_frames):
     mels, tokens = zip(*batch)
     n_mel = mels[0].size(1)
