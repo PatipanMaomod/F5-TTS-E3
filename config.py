@@ -27,7 +27,7 @@ class F5Config:
     num_workers: int = 4
 
     # Paths
-    pretrain_path: str = "./pretrained/"
-    vocab_path: str = "./pretrained/vocab.txt"
-    data_path: str = "./data"
+    pretrain_path: str = "./pretrained"
+    vocab_path: str = "./dataset/vocab.txt"
+    data_path: str = "./dataset"
     output_dir: str = "./ckpts/f5tts"
