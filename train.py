@@ -38,15 +38,28 @@ def build_scheduler(optimizer, warmup_steps, total_steps):
 
 def maybe_resume(model, optimizer, scheduler, scaler, cfg):
     start_step = 0
-    if cfg.resume_ckpt and os.path.exists(cfg.resume_ckpt):
-        print(f"Resuming from {cfg.resume_ckpt}")
-        ckpt = torch.load(cfg.resume_ckpt, map_location="cpu")
+
+    ckpt_path = cfg.resume_ckpt
+    if not ckpt_path:
+        ckpts = sorted([
+            f for f in os.listdir(cfg.output_dir)
+            if f.startswith("step_") and f.endswith(".pt")
+        ]) if os.path.exists(cfg.output_dir) else []
+        if ckpts:
+            ckpt_path = os.path.join(cfg.output_dir, ckpts[-1])
+
+    if ckpt_path and os.path.exists(ckpt_path):
+        print(f"Resuming from {ckpt_path}")
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         model.load_state_dict(ckpt["model"])
         optimizer.load_state_dict(ckpt["optimizer"])
         scheduler.load_state_dict(ckpt["scheduler"])
         scaler.load_state_dict(ckpt["scaler"])
         start_step = ckpt["step"]
-        print(f"   → resumed at step {start_step}")
+        print(f"   → resumed at step {start_step:,}")
+    else:
+        print("No checkpoint found, training from scratch")
+
     return start_step
 
 
