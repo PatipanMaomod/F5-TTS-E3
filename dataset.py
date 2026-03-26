@@ -54,11 +54,12 @@ class VoiceDataset(Dataset):
             wav = torchaudio.functional.resample(wav, sr, self.sample_rate)
 
         #augment
-        wav = augment_audio(wav, self.sample_rate)
+        #wav = augment_audio(wav, self.sample_rate)
+        wav = augment_audio(wav, self.sample_rate, pitch_range=0, speed_range=0)
 
         mel = self.mel(wav)                    # [n_mel, T]
         mel = torch.log(mel.clamp(min=1e-5))
-        mel = mel.T                            # [T, n_mel]
+        mel = mel.squeeze(0).transpose(0, 1)  # [n_mel, T] → [T, n_mel]
 
         tokens = torch.tensor(self.tokenize(text), dtype=torch.long)
         return mel, tokens

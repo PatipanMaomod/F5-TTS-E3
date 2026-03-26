@@ -13,20 +13,21 @@ class F5Config:
 
     # Mel
     n_mel_channels: int = 100
-    hop_length: int = 256
-    sample_rate: int = 24000
+    hop_length: int = 200
+    sample_rate: int = 16000
 
     # Training
     learning_rate: float = 7.5e-5
     warmup_steps: int = 20000
-    total_steps: int = 1_000_000
-    grad_accum: int = 8          # เพิ่ม accum
+    total_steps: int = 1000
+    grad_accum: int = 4          # เพิ่ม accum
     max_grad_norm: float = 1.0
-    batch_size_per_gpu: int = 4
+    batch_size_per_gpu: int = 12
 
     max_mel_len: int = 1200
 
     save_checkpoint: int = 500
+
 
 
     # Paths

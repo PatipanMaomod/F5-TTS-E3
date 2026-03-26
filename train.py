@@ -39,7 +39,7 @@ def build_scheduler(optimizer, warmup_steps, total_steps):
 def maybe_resume(model, optimizer, scheduler, scaler, cfg):
     start_step = 0
     if cfg.resume_ckpt and os.path.exists(cfg.resume_ckpt):
-        print(f"🔄 Resuming from {cfg.resume_ckpt}")
+        print(f"Resuming from {cfg.resume_ckpt}")
         ckpt = torch.load(cfg.resume_ckpt, map_location="cpu")
         model.load_state_dict(ckpt["model"])
         optimizer.load_state_dict(ckpt["optimizer"])
@@ -68,6 +68,8 @@ def train():
         persistent_workers=cfg.num_workers > 0,
     )
 
+
+
     # ── Vocab size ──
     with open(cfg.vocab_path, encoding="utf-8") as f:
         vocab_size = sum(1 for l in f if l.strip())
@@ -79,7 +81,7 @@ def train():
     model = torch.compile(model)
 
     total_params = sum(p.numel() for p in model.parameters()) / 1e6
-    print(f"📐 Model params: {total_params:.1f}M")
+    print(f"Model params: {total_params:.1f}M")
 
 
     # แทนที่ optimizer เดิม
@@ -150,13 +152,13 @@ def train():
                     "scaler": scaler.state_dict(),
                     "cfg": cfg,
                 }, path)
-                print(f"💾 Saved → {path}")
+                print(f"Saved → {path}")
 
             if step >= cfg.total_steps:
                 break
 
     pbar.close()
-    print("\n✅ Done!")
+    print("\nDone!")
 
 
 if __name__ == "__main__":
