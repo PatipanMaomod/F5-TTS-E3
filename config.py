@@ -27,7 +27,7 @@ class F5Config:
     num_workers: int = 4
 
     # Paths
-    pretrain_path: str = "./pretrained/F5TTS_v1_Base/model_1250000.safetensors"
-    vocab_path: str = "./pretrained/F5TTS_v1_Base/vocab.txt"
-    data_path: str = "./data/train"
-    output_dir: str = "./ckpts/my_f5tts"
+    pretrain_path: str = "./pretrained/"
+    vocab_path: str = "./pretrained/vocab.txt"
+    data_path: str = "./data"
+    output_dir: str = "./ckpts/f5tts"
