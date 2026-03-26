@@ -16,17 +16,19 @@ class F5Config:
     hop_length: int = 256
     sample_rate: int = 24000
 
-    # Training — from scratch ต้องใช้ lr สูงกว่า finetune
+    # Training
     learning_rate: float = 7.5e-5
-    warmup_steps: int = 20000      # warmup นานขึ้นด้วย
+    warmup_steps: int = 20000
     total_steps: int = 1_000_000
-    grad_accum: int = 4
+    grad_accum: int = 8          # เพิ่ม accum
     max_grad_norm: float = 1.0
-    batch_size: int = 6400         # frames
+    batch_size_per_gpu: int = 4
+
+    max_mel_len: int = 1200
 
     # Paths
-    vocab_path: str = "./dataset/vocab.txt"
-    data_path: str = "./dataset"
+    vocab_path: str = "/content/F5-TTS-E3/dataset/vocab.txt"
+    data_path: str = "/content/F5-TTS-E3/dataset"
     output_dir: str = "./ckpts/f5tts"
-    resume_ckpt: str = ""          # ถ้าอยากเทรนต่อจาก checkpoint
-    num_workers: int = 4
+    resume_ckpt: str = ""
+    num_workers: int = 2

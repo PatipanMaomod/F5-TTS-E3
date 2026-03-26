@@ -2,12 +2,14 @@ import torch
 from torch.utils.data import Dataset
 import torchaudio
 import pandas as pd
-from pathlib import Path
+
+import config
+from config import F5Config
 
 
 class VoiceDataset(Dataset):
     def __init__(self, data_path, vocab_path, sample_rate=24000, n_mel=100):
-        self.data_path   = Path(data_path)
+        self.data_path   = str(data_path)
         self.sample_rate = sample_rate
         self.n_mel       = n_mel
 
@@ -15,9 +17,10 @@ class VoiceDataset(Dataset):
         with open(vocab_path, encoding="utf-8") as f:
             chars = [l.strip() for l in f if l.strip()]
         self.char2id = {c: i+1 for i, c in enumerate(chars)}  # 0 = pad
+        self.vocab_size = len(self.char2id)
 
         # โหลด metadata
-        df = pd.read_csv(self.data_path / "metadata.csv", sep="|",
+        df = pd.read_csv(f'{self.data_path}/metadata.csv', sep="|",
                          names=["path", "text"])
         self.items = df.values.tolist()
 
@@ -35,6 +38,8 @@ class VoiceDataset(Dataset):
 
     def __getitem__(self, idx):
         audio_path, text = self.items[idx]
+
+        audio_path = f"{self.data_path}/wavs/{audio_path}"
         wav, sr = torchaudio.load(audio_path)
         if sr != self.sample_rate:
             wav = torchaudio.functional.resample(wav, sr, self.sample_rate)
@@ -47,21 +52,22 @@ class VoiceDataset(Dataset):
         tokens = torch.tensor(self.tokenize(text), dtype=torch.long)
         return mel, tokens
 
+    def collate_fn(batch):
+        mels, tokens = zip(*batch)
+        n_mel = mels[0].size(1)
 
-def collate_fn(batch):
-    mels, tokens = zip(*batch)
+        # Crop T_max
+        T_max = min(max(m.size(0) for m in mels), F5Config().max_mel_len)
+        T_text = max(t.size(0) for t in tokens)
 
-    T_max    = max(m.size(0) for m in mels)
-    T_text   = max(t.size(0) for t in tokens)
-    n_mel    = mels[0].size(1)
+        mel_pad = torch.zeros(len(mels), T_max, n_mel)
+        tok_pad = torch.zeros(len(tokens), T_text, dtype=torch.long)
+        mask    = torch.zeros(len(mels), T_max, dtype=torch.bool)
 
-    mel_pad = torch.zeros(len(mels), T_max, n_mel)
-    tok_pad = torch.zeros(len(tokens), T_text, dtype=torch.long)
-    mask    = torch.zeros(len(mels), T_max, dtype=torch.bool)
+        for i, (m, t) in enumerate(zip(mels, tokens)):
+            L = min(m.size(0), T_max)
+            mel_pad[i, :L] = m[:L]
+            mask[i, :L] = True
+            tok_pad[i, :t.size(0)] = t
 
-    for i, (m, t) in enumerate(zip(mels, tokens)):
-        mel_pad[i, :m.size(0)] = m
-        tok_pad[i, :t.size(0)] = t
-        mask[i, :m.size(0)]    = True
-
-    return mel_pad, tok_pad, mask
+        return mel_pad, tok_pad, mask
