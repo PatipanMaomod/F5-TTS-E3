@@ -33,6 +33,6 @@ class F5Config:
     # Paths
     vocab_path: str = "/content/F5-TTS-E3/dataset/vocab.txt"
     data_path: str = "/content/F5-TTS-E3/dataset"
-    output_dir: str = "./ckpts/f5tts"
+    output_dir: str = "/content/F5-TTS-E3/ckpts"
     resume_ckpt: str = ""
     num_workers: int = 2
