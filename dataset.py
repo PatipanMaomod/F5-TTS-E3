@@ -38,6 +38,9 @@ class VoiceDataset(Dataset):
     def __getitem__(self, idx):
         fname, text = self.items[idx]
 
+        if not isinstance(text, str):
+            text = ""
+
         audio_path = f"{self.data_path}/wavs/{fname}"
 
         if not os.path.exists(audio_path):
@@ -55,22 +58,31 @@ class VoiceDataset(Dataset):
         tokens = torch.tensor(self.tokenize(text), dtype=torch.long)
         return mel, tokens
 
+
 def collate_fn(batch):
     mels, tokens = zip(*batch)
     n_mel = mels[0].size(1)
+    max_frames = F5Config().max_mel_len  # 1200 frames ตาม config
 
-    # Crop T_max
-    T_max = min(max(m.size(0) for m in mels), F5Config().max_mel_len)
+    # เตรียม tensor สำหรับ mel, mask, tokens
+    mel_pad = torch.zeros(len(mels), max_frames, n_mel)
+    mask = torch.zeros(len(mels), max_frames, dtype=torch.bool)
     T_text = max(t.size(0) for t in tokens)
-
-    mel_pad = torch.zeros(len(mels), T_max, n_mel)
     tok_pad = torch.zeros(len(tokens), T_text, dtype=torch.long)
-    mask    = torch.zeros(len(mels), T_max, dtype=torch.bool)
 
     for i, (m, t) in enumerate(zip(mels, tokens)):
-        L = min(m.size(0), T_max)
-        mel_pad[i, :L] = m[:L]
-        mask[i, :L] = True
+        L = m.size(0)
+        if L > max_frames:
+            # random crop ถ้าเสียงยาวกว่า 1200 frames
+            start = torch.randint(0, L - max_frames + 1, (1,)).item()
+            mel_pad[i] = m[start:start + max_frames]
+            mask[i] = True
+        else:
+            # pad ถ้าเสียงสั้น
+            mel_pad[i, :L] = m
+            mask[i, :L] = True
+
+        # pad token
         tok_pad[i, :t.size(0)] = t
 
     return mel_pad, tok_pad, mask

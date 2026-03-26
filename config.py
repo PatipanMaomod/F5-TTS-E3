@@ -26,7 +26,7 @@ class F5Config:
 
     max_mel_len: int = 1200
 
-    total_steps: int = 500
+    save_checkpoint: int = 500
 
 
     # Paths
