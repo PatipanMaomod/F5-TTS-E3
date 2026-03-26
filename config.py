@@ -26,6 +26,9 @@ class F5Config:
 
     max_mel_len: int = 1200
 
+    total_steps: int = 500
+
+
     # Paths
     vocab_path: str = "/content/F5-TTS-E3/dataset/vocab.txt"
     data_path: str = "/content/F5-TTS-E3/dataset"

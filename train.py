@@ -8,6 +8,7 @@ from config import F5Config
 from model import F5TTS
 from dataset import VoiceDataset, collate_fn
 import bitsandbytes as bnb
+from tqdm import tqdm
 
 
 def flow_matching_loss(model, clean_mel, text_tokens, mask):
@@ -102,12 +103,13 @@ def train():
     optimizer.zero_grad()
 
     print(f"\n🚀 Training from scratch | steps: {cfg.total_steps:,} | device: {device}\n")
+    pbar = tqdm(total=cfg.total_steps, initial=step, desc="Training", unit="step", dynamic_ncols=True)
 
     while step < cfg.total_steps:
         for mel, tokens, mask in loader:
-            mel    = mel.to(device, non_blocking=True)
+            mel = mel.to(device, non_blocking=True)
             tokens = tokens.to(device, non_blocking=True)
-            mask   = mask.to(device, non_blocking=True)
+            mask = mask.to(device, non_blocking=True)
 
             # ── fp16 forward ──
             with autocast(device_type="cuda", dtype=torch.float16):
@@ -115,7 +117,7 @@ def train():
 
             scaler.scale(loss).backward()
             run_loss += loss.item()
-            accum    += 1
+            accum += 1
 
             if accum % cfg.grad_accum != 0:
                 continue
@@ -127,30 +129,33 @@ def train():
             scaler.update()
             scheduler.step()
             optimizer.zero_grad()
-            step  += 1
-            accum  = 0
+            step += 1
+            accum = 0
 
-            if step % 100 == 0:
-                avg_loss = run_loss * cfg.grad_accum / 100
-                lr       = scheduler.get_last_lr()[0]
-                print(f"step {step:>7,} | loss {avg_loss:.4f} | lr {lr:.2e}")
-                run_loss = 0.0
+            # update progress bar
+            avg_loss = run_loss * cfg.grad_accum
+            lr = scheduler.get_last_lr()[0]
+            pbar.set_postfix({'loss': f'{avg_loss:.4f}', 'lr': f'{lr:.2e}'})
+            pbar.update(1)
+            run_loss = 0.0  # reset after update
 
-            if step % 5000 == 0 or step == cfg.total_steps:
+            # save checkpoint
+            if step % cfg.save_checkpoint == 0 or step == cfg.total_steps:
                 path = f"{cfg.output_dir}/step_{step:08d}.pt"
                 torch.save({
-                    "step":      step,
-                    "model":     model.state_dict(),
+                    "step": step,
+                    "model": model.state_dict(),
                     "optimizer": optimizer.state_dict(),
                     "scheduler": scheduler.state_dict(),
-                    "scaler":    scaler.state_dict(),
-                    "cfg":       cfg,
+                    "scaler": scaler.state_dict(),
+                    "cfg": cfg,
                 }, path)
                 print(f"💾 Saved → {path}")
 
             if step >= cfg.total_steps:
                 break
 
+    pbar.close()
     print("\n✅ Done!")
 
 

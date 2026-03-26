@@ -2,8 +2,7 @@ import torch
 from torch.utils.data import Dataset
 import torchaudio
 import pandas as pd
-
-import config
+import os
 from config import F5Config
 
 
@@ -37,9 +36,13 @@ class VoiceDataset(Dataset):
         return len(self.items)
 
     def __getitem__(self, idx):
-        audio_path, text = self.items[idx]
+        fname, text = self.items[idx]
 
-        audio_path = f"{self.data_path}/wavs/{audio_path}"
+        audio_path = f"{self.data_path}/wavs/{fname}"
+
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError(f"File not found: {audio_path}")
+
         wav, sr = torchaudio.load(audio_path)
         if sr != self.sample_rate:
             wav = torchaudio.functional.resample(wav, sr, self.sample_rate)
@@ -52,22 +55,22 @@ class VoiceDataset(Dataset):
         tokens = torch.tensor(self.tokenize(text), dtype=torch.long)
         return mel, tokens
 
-    def collate_fn(batch):
-        mels, tokens = zip(*batch)
-        n_mel = mels[0].size(1)
+def collate_fn(batch):
+    mels, tokens = zip(*batch)
+    n_mel = mels[0].size(1)
 
-        # Crop T_max
-        T_max = min(max(m.size(0) for m in mels), F5Config().max_mel_len)
-        T_text = max(t.size(0) for t in tokens)
+    # Crop T_max
+    T_max = min(max(m.size(0) for m in mels), F5Config().max_mel_len)
+    T_text = max(t.size(0) for t in tokens)
 
-        mel_pad = torch.zeros(len(mels), T_max, n_mel)
-        tok_pad = torch.zeros(len(tokens), T_text, dtype=torch.long)
-        mask    = torch.zeros(len(mels), T_max, dtype=torch.bool)
+    mel_pad = torch.zeros(len(mels), T_max, n_mel)
+    tok_pad = torch.zeros(len(tokens), T_text, dtype=torch.long)
+    mask    = torch.zeros(len(mels), T_max, dtype=torch.bool)
 
-        for i, (m, t) in enumerate(zip(mels, tokens)):
-            L = min(m.size(0), T_max)
-            mel_pad[i, :L] = m[:L]
-            mask[i, :L] = True
-            tok_pad[i, :t.size(0)] = t
+    for i, (m, t) in enumerate(zip(mels, tokens)):
+        L = min(m.size(0), T_max)
+        mel_pad[i, :L] = m[:L]
+        mask[i, :L] = True
+        tok_pad[i, :t.size(0)] = t
 
-        return mel_pad, tok_pad, mask
+    return mel_pad, tok_pad, mask
