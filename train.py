@@ -102,7 +102,7 @@ def train():
     run_loss = 0.0
     optimizer.zero_grad()
 
-    print(f"\n🚀 Training from scratch | steps: {cfg.total_steps:,} | device: {device}\n")
+    print(f"\nTraining from scratch | steps: {cfg.total_steps:,} | device: {device}\n")
     pbar = tqdm(total=cfg.total_steps, initial=step, desc="Training", unit="step", dynamic_ncols=True)
 
     while step < cfg.total_steps:
