@@ -29,9 +29,8 @@ class F5Config:
     save_checkpoint: int = 500
 
     # Eval
-    eval_every: int = 500        # eval ทุกกี่ step (ตั้งเท่า save_checkpoint ก็ได้)
-    val_split: float = 0.05      # แบ่ง 5% เป็น val set
-    eval_max_batches: int = 50   # จำกัด batch ตอน eval ไม่ให้รอนาน (-1 = วิ่งทั้งหมด)
+    eval_every: int = 500  # eval ทุกกี่ step
+    eval_max_batches: int = 50  # จำกัด batch ตอน eval (-1 = วิ่งทั้งหมด)
 
     # Paths
     vocab_path: str = "/content/F5-TTS-E3/dataset/vocab.txt"

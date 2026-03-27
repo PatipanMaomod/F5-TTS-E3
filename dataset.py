@@ -11,6 +11,8 @@ import random
 class VoiceDataset(Dataset):
     def __init__(self, data_path, vocab_path, sample_rate=24000, n_mel=100):
         self.data_path   = str(data_path)
+        self.base_dir = os.path.dirname(str(data_path))
+
         self.sample_rate = sample_rate
         self.n_mel       = n_mel
 
@@ -22,8 +24,7 @@ class VoiceDataset(Dataset):
 
 
         # โหลด metadata
-        df = pd.read_csv(f'{self.data_path}/metadata.csv', sep="|",
-                         names=["path", "text"], skiprows=1)
+        df = pd.read_csv(f'{self.data_path}', sep=",",names=["path", "text"], skiprows=1)
         self.items = df.values.tolist()
 
         # Mel filterbank
@@ -40,16 +41,15 @@ class VoiceDataset(Dataset):
 
     def __getitem__(self, idx):
         fname, text = self.items[idx]
+
         if not isinstance(text, str):
             text = ""
 
-        # โหลด mel จาก cache แทน compute ใหม่
-        cache_path = f"{self.data_path}/mel_cache/{fname}.pt"
+        cache_path = os.path.join(self.base_dir, "mel_cache", f"{fname}.pt")
         if os.path.exists(cache_path):
             mel = torch.load(cache_path, weights_only=True)
         else:
-            # fallback คำนวณสดถ้าไม่มี cache
-            audio_path = f"{self.data_path}/wavs/{fname}"
+            audio_path = os.path.join(self.base_dir, "wavs", fname)
             wav, sr = torchaudio.load(audio_path)
             if sr != self.sample_rate:
                 wav = torchaudio.functional.resample(wav, sr, self.sample_rate)
@@ -86,28 +86,20 @@ def collate_fn(batch,max_frames):
 
     return mel_pad, tok_pad, mask
 
-
-
-
-
-
 def augment_audio(wav, sample_rate=24000, pitch_range=2, speed_range=0.05):
-    """
-    wav: Tensor [1, T] หรือ [T]
-    pitch_range: สูงสุด ±จำนวน semitone
-    speed_range: ±% ของความเร็ว
-    """
     # 1. Random pitch shift
     semitone_shift = random.uniform(-pitch_range, pitch_range)
     if semitone_shift != 0:
-        wav = T.Resample(orig_freq=sample_rate, new_freq=int(sample_rate * 2 ** (semitone_shift/12)))(wav)
+        new_freq = int(sample_rate * (2 ** (semitone_shift / 12)))
+        wav = torchaudio.functional.resample(wav, sample_rate, new_freq)
+        wav = torchaudio.functional.resample(wav, new_freq, sample_rate)
 
     # 2. Random speed change
-    speed_factor = random.uniform(1-speed_range, 1+speed_range)
-    if speed_factor != 1:
-        wav = T.Resample(orig_freq=sample_rate, new_freq=int(sample_rate*speed_factor))(wav)
-
-    # 3. ปรับให้กลับมาที่ sample_rate เดิม
-    wav = T.Resample(orig_freq=wav.shape[-1], new_freq=sample_rate)(wav) if wav.shape[-1] != sample_rate else wav
+    speed_factor = random.uniform(1 - speed_range, 1 + speed_range)
+    if abs(speed_factor - 1.0) > 1e-4:
+        orig_len = wav.shape[-1]
+        new_len  = int(orig_len / speed_factor)
+        wav = torchaudio.functional.resample(wav, orig_len, new_len)
+        wav = torchaudio.functional.resample(wav, new_len, orig_len)
 
     return wav
